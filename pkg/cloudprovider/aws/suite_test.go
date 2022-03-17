@@ -260,6 +260,36 @@ var _ = Describe("Allocation", func() {
 				// and ensure no one gets our no-ENI instance types
 				cloudProvider.(*CloudProvider).instanceTypeProvider.cache = cache.New(InstanceTypesAndZonesCacheTTL, CacheCleanupInterval)
 			})
+			It("should not launch m4.xlarge for windows pods", func() {
+				for _, pod := range ExpectProvisioned(ctx, env.Client, selectionController, provisioners, provisioner,
+					test.UnschedulablePod(test.PodOptions{
+						NodeSelector: map[string]string{
+							v1.LabelOSStable:           "windows",
+							v1.LabelInstanceTypeStable: "m4.xlarge",
+						},
+						ResourceRequirements: v1.ResourceRequirements{
+							Requests: v1.ResourceList{resources.AWSPodPrivateIPv4: resource.MustParse("1")},
+							Limits:   v1.ResourceList{resources.AWSPodPrivateIPv4: resource.MustParse("1")},
+						},
+					})) {
+					ExpectNotScheduled(ctx, env.Client, pod)
+				}
+			})
+			It("should launch m4.16xlarge for windows pods", func() {
+				for _, pod := range ExpectProvisioned(ctx, env.Client, selectionController, provisioners, provisioner,
+					test.UnschedulablePod(test.PodOptions{
+						NodeSelector: map[string]string{
+							v1.LabelOSStable:           "windows",
+							v1.LabelInstanceTypeStable: "m4.16xlarge",
+						},
+						ResourceRequirements: v1.ResourceRequirements{
+							Requests: v1.ResourceList{resources.AWSPodPrivateIPv4: resource.MustParse("1")},
+							Limits:   v1.ResourceList{resources.AWSPodPrivateIPv4: resource.MustParse("1")},
+						},
+					})) {
+					ExpectScheduled(ctx, env.Client, pod)
+				}
+			})
 			It("should launch AWS Pod ENI on a compatible instance type", func() {
 				instanceTypeCache.Flush()
 				ExpectApplied(ctx, env.Client, provisioner)

@@ -110,12 +110,25 @@ func (i *InstanceType) Price() float64 {
 		localStorageGiBs*LocalStorageWeight
 }
 
+func (i *InstanceType) OperatingSystems() sets.String {
+	// https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html#windows-support-prerequisites
+	if functional.HasAnyPrefix(i.Name(), "c3", "c4", "d2", "i2", "m6a", "r3") {
+		return sets.NewSet(v1alpha5.OperatingSystemLinux)
+	}
+
+	if strings.HasPrefix(i.Name(), "m4") && i.Name() != "m4.16xlarge" {
+		return sets.NewSet(v1alpha5.OperatingSystemLinux)
+	}
+
+	return sets.NewSet(v1alpha5.OperatingSystemLinux, v1alpha5.OperatingSystemWindows)
+}
+
 func (i *InstanceType) computeRequirements() scheduling.Requirements {
 	requirements := scheduling.Requirements{
 		// Well Known Upstream
 		v1.LabelInstanceTypeStable: sets.NewSet(i.Name()),
 		v1.LabelArchStable:         sets.NewSet(i.architecture()),
-		v1.LabelOSStable:           sets.NewSet(v1alpha5.OperatingSystemLinux),
+		v1.LabelOSStable:           OperatingSystems(i),
 		v1.LabelTopologyZone:       sets.NewSet(lo.Map(i.Offerings(), func(o cloudprovider.Offering, _ int) string { return o.Zone })...),
 		// Well Known to Karpenter
 		v1alpha5.LabelCapacityType: sets.NewSet(lo.Map(i.Offerings(), func(o cloudprovider.Offering, _ int) string { return o.CapacityType })...),
