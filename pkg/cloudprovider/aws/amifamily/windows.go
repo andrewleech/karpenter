@@ -37,7 +37,7 @@ func (w Windows) SSMAlias(version string, _ cloudprovider.InstanceType) string {
 }
 
 // UserData returns the default userdata script for the AMI Family
-func (w Windows) UserData(kubeletConfig *v1alpha5.KubeletConfiguration, taints []core.Taint, labels map[string]string, caBundle *string, instanceTypes []cloudprovider.InstanceType) bootstrap.Bootstrapper {
+func (w Windows) UserData(kubeletConfig *v1alpha5.KubeletConfiguration, taints []core.Taint, labels map[string]string, caBundle *string, instanceTypes []cloudprovider.InstanceType, customUserData *string) bootstrap.Bootstrapper {
 	return bootstrap.Windows{
 		Options: bootstrap.Options{
 			ClusterName:             w.ClusterName,
@@ -53,12 +53,16 @@ func (w Windows) UserData(kubeletConfig *v1alpha5.KubeletConfiguration, taints [
 
 // DefaultBlockDeviceMappings returns the default block device mappings for the AMI Family
 func (w Windows) DefaultBlockDeviceMappings() []*v1alpha1.BlockDeviceMapping {
-	sda := defaultEBS
-	sda.VolumeSize = resource.NewScaledQuantity(50, resource.Giga)
-	return []*v1alpha1.BlockDeviceMapping{
-		{
-			DeviceName: aws.String("/dev/sda1"),
-			EBS:        &sda,
-		},
-	}
+	return []*v1alpha1.BlockDeviceMapping{{
+		DeviceName: w.EphemeralBlockDevice(),
+		EBS:        &DefaultEBS,
+	}}
+}
+
+func (w Windows) EphemeralBlockDevice() *string {
+	return aws.String("/dev/sda1")
+}
+
+func (w Windows) EphemeralBlockDeviceOverhead() resource.Quantity {
+	return resource.MustParse("25Gi")
 }

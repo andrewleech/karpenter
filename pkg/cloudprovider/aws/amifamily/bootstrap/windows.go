@@ -25,7 +25,7 @@ type Windows struct {
 	Options
 }
 
-func (w Windows) Script() string {
+func (w Windows) Script() (string, error) {
 	var caBundleArg string
 	if w.CABundle != nil {
 		caBundleArg = fmt.Sprintf(`-Base64ClusterCA "%s"`, *w.CABundle)
@@ -45,5 +45,5 @@ func (w Windows) Script() string {
 		userData.WriteString(fmt.Sprintf(` -DNSClusterIP "%s"`, w.KubeletConfig.ClusterDNS[0]))
 	}
 	userData.WriteString("\n</powershell>")
-	return base64.StdEncoding.EncodeToString(userData.Bytes())
+	return base64.StdEncoding.EncodeToString(userData.Bytes()), nil
 }
