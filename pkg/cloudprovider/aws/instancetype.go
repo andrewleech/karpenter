@@ -31,6 +31,7 @@ import (
 	"github.com/aws/karpenter/pkg/cloudprovider/aws/amifamily"
 	"github.com/aws/karpenter/pkg/cloudprovider/aws/apis/v1alpha1"
 	"github.com/aws/karpenter/pkg/scheduling"
+	"github.com/aws/karpenter/pkg/utils/functional"
 	"github.com/aws/karpenter/pkg/utils/resources"
 	"github.com/aws/karpenter/pkg/utils/sets"
 )
@@ -110,7 +111,7 @@ func (i *InstanceType) Price() float64 {
 		localStorageGiBs*LocalStorageWeight
 }
 
-func (i *InstanceType) OperatingSystems() sets.String {
+func (i *InstanceType) OperatingSystems() sets.Set {
 	// https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html#windows-support-prerequisites
 	if functional.HasAnyPrefix(i.Name(), "c3", "c4", "d2", "i2", "m6a", "r3") {
 		return sets.NewSet(v1alpha5.OperatingSystemLinux)
@@ -128,7 +129,7 @@ func (i *InstanceType) computeRequirements() scheduling.Requirements {
 		// Well Known Upstream
 		v1.LabelInstanceTypeStable: sets.NewSet(i.Name()),
 		v1.LabelArchStable:         sets.NewSet(i.architecture()),
-		v1.LabelOSStable:           OperatingSystems(i),
+		v1.LabelOSStable:           i.OperatingSystems(),
 		v1.LabelTopologyZone:       sets.NewSet(lo.Map(i.Offerings(), func(o cloudprovider.Offering, _ int) string { return o.Zone })...),
 		// Well Known to Karpenter
 		v1alpha5.LabelCapacityType: sets.NewSet(lo.Map(i.Offerings(), func(o cloudprovider.Offering, _ int) string { return o.CapacityType })...),
